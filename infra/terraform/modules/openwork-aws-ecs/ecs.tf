@@ -1,13 +1,3 @@
-resource "aws_ecs_cluster" "this" {
-  name = "${var.name}-den"
-  tags = var.tags
-
-  setting {
-    name  = "containerInsights"
-    value = "enabled"
-  }
-}
-
 resource "aws_service_discovery_private_dns_namespace" "this" {
   name        = "${var.name}.internal"
   description = "OpenWork service discovery"
@@ -188,7 +178,7 @@ resource "aws_ecs_task_definition" "web" {
 
 resource "aws_ecs_service" "api" {
   name            = "den-api"
-  cluster         = aws_ecs_cluster.this.id
+  cluster         = var.ecs_cluster
   task_definition = aws_ecs_task_definition.api.arn
   desired_count   = var.den_api.desired_count
   launch_type     = "FARGATE"
@@ -225,7 +215,7 @@ resource "aws_ecs_service" "api" {
 
 resource "aws_ecs_service" "web" {
   name            = "den-web"
-  cluster         = aws_ecs_cluster.this.id
+  cluster         = var.ecs_cluster
   task_definition = aws_ecs_task_definition.web.arn
   desired_count   = var.den_web.desired_count
   launch_type     = "FARGATE"

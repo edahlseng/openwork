@@ -17,6 +17,11 @@ variable "alb_subnet_ids" {
   type        = list(string)
 }
 
+variable "ecs_cluster" {
+  description = "The ID of the ECS cluster to deploy to"
+  type = string
+}
+
 variable "service_subnet_ids" {
   description = "Subnets for the Fargate tasks. Private subnets need a NAT gateway or VPC endpoints to pull images from ghcr.io; public subnets need assign_public_ip = true."
   type        = list(string)
