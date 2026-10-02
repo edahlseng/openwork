@@ -20,7 +20,7 @@ output "bootstrap_code" {
 }
 
 output "cluster_name" {
-  value = aws_ecs_cluster.this.name
+  value = var.ecs_cluster
 }
 
 output "service_names" {
