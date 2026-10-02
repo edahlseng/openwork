@@ -102,8 +102,18 @@ resource "aws_lb_target_group" "web" {
   }
 }
 
+# Listeners -----------------------------------------------------------------
+
+locals {
+  existing_listener_arn = var.alb_listener_arn != "" ? var.alb_listener_arn : var.listener_arn
+  create_listener       = local.existing_listener_arn == ""
+  listener_arn          = local.create_listener ? (length(aws_lb_listener.https) > 0 ? aws_lb_listener.https[0].arn : "") : local.existing_listener_arn
+}
+
 # HTTPS on 443: den-web by default, den-api by host. HTTP redirects.
 resource "aws_lb_listener" "https" {
+  count = local.create_listener ? 1 : 0
+
   load_balancer_arn = var.load_balancer_arn
   port              = 443
   protocol          = "HTTPS"
@@ -118,8 +128,8 @@ resource "aws_lb_listener" "https" {
 }
 
 resource "aws_lb_listener_rule" "api_host" {
-  listener_arn = aws_lb_listener.https.arn
-  priority     = 10
+  listener_arn = local.listener_arn
+  priority     = var.api_listener_rule_priority
   tags         = var.tags
 
   action {
@@ -134,7 +144,28 @@ resource "aws_lb_listener_rule" "api_host" {
   }
 }
 
+resource "aws_lb_listener_rule" "web_host" {
+  count = local.create_listener ? 0 : 1
+
+  listener_arn = local.listener_arn
+  priority     = var.web_listener_rule_priority
+  tags         = var.tags
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web.arn
+  }
+
+  condition {
+    host_header {
+      values = [var.domain_name]
+    }
+  }
+}
+
 resource "aws_lb_listener" "http" {
+  count = local.create_listener ? 1 : 0
+
   load_balancer_arn = var.load_balancer_arn
   port              = 80
   protocol          = "HTTP"
@@ -148,5 +179,12 @@ resource "aws_lb_listener" "http" {
       status_code = "HTTP_301"
     }
   }
+}
+
+resource "aws_lb_listener_certificate" "this" {
+  count = !local.create_listener && var.attach_listener_certificate ? 1 : 0
+
+  listener_arn    = local.listener_arn
+  certificate_arn = local.certificate_arn
 }
 

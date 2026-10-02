@@ -70,6 +70,10 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+resource "aws_ecs_cluster" "this" {
+  name = var.name
+}
+
 module "openwork" {
   source = "../.."
 
@@ -78,8 +82,8 @@ module "openwork" {
   owner_emails     = var.owner_emails
   org_name         = var.org_name
 
+  ecs_cluster         = aws_ecs_cluster.this.id
   vpc_id              = aws_vpc.this.id
-  alb_subnet_ids      = aws_subnet.public[*].id
   service_subnet_ids  = aws_subnet.public[*].id # no NAT: tasks get public IPs
   assign_public_ip    = true
   database_subnet_ids = aws_subnet.database[*].id

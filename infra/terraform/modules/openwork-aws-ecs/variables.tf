@@ -12,19 +12,45 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "alb_subnet_ids" {
-  description = "Subnets for the load balancer (public subnets for an internet-facing ALB). At least two AZs."
-  type        = list(string)
-}
-
 variable "ecs_cluster" {
   description = "The ID of the ECS cluster to deploy to"
   type        = string
 }
 
 variable "load_balancer_arn" {
-  description = "The ARN of the load balancer to deploy to"
+  description = "The ARN of the load balancer to deploy to. Required unless alb_listener_arn is specified."
   type        = string
+  default     = ""
+}
+
+variable "alb_listener_arn" {
+  description = "The ARN of an existing ALB HTTPS listener. If set, listener rules are attached to this listener instead of creating new listeners on load_balancer_arn."
+  type        = string
+  default     = ""
+}
+
+variable "listener_arn" {
+  description = "Alias for alb_listener_arn."
+  type        = string
+  default     = ""
+}
+
+variable "api_listener_rule_priority" {
+  description = "Priority for the API listener rule."
+  type        = number
+  default     = 10
+}
+
+variable "web_listener_rule_priority" {
+  description = "Priority for the Web listener rule when using an existing listener."
+  type        = number
+  default     = 20
+}
+
+variable "attach_listener_certificate" {
+  description = "Whether to attach certificate_arn to the existing listener using aws_lb_listener_certificate."
+  type        = bool
+  default     = false
 }
 
 variable "service_subnet_ids" {
@@ -122,12 +148,6 @@ variable "route53_zone_id" {
   description = "Route 53 hosted zone for both hostnames. When set, the module creates alias records and, if certificate_arn is empty, the ACM certificate. Leave empty when DNS is elsewhere; point both names at the alb_dns_name output."
   type        = string
   default     = ""
-}
-
-variable "internal_alb" {
-  description = "Create an internal ALB, reachable only inside the VPC (VPN/private network deployments)."
-  type        = bool
-  default     = false
 }
 
 variable "allowed_ingress_cidrs" {
