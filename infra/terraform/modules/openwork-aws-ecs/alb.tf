@@ -1,6 +1,17 @@
 # Security groups ------------------------------------------------------------
 
+locals {
+  existing_listener_arn = var.alb_listener_arn != "" ? var.alb_listener_arn : var.listener_arn
+  create_listener       = local.existing_listener_arn == ""
+  listener_arn          = local.create_listener ? (length(aws_lb_listener.https) > 0 ? aws_lb_listener.https[0].arn : "") : local.existing_listener_arn
+  alb_security_group_id = var.alb_security_group_id != "" ? var.alb_security_group_id : (
+    length(aws_security_group.alb) > 0 ? aws_security_group.alb[0].id : ""
+  )
+}
+
 resource "aws_security_group" "alb" {
+  count = local.create_listener && var.alb_security_group_id == "" ? 1 : 0
+
   name_prefix = "${var.name}-alb-"
   description = "OpenWork ALB"
   vpc_id      = var.vpc_id
@@ -12,9 +23,9 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb" {
-  for_each = { for pair in setproduct([80, 443], var.allowed_ingress_cidrs) : "${pair[0]}-${pair[1]}" => pair }
+  for_each = (local.create_listener && var.alb_security_group_id == "") ? { for pair in setproduct([80, 443], var.allowed_ingress_cidrs) : "${pair[0]}-${pair[1]}" => pair } : {}
 
-  security_group_id = aws_security_group.alb.id
+  security_group_id = aws_security_group.alb[0].id
   from_port         = each.value[0]
   to_port           = each.value[0]
   ip_protocol       = "tcp"
@@ -22,7 +33,9 @@ resource "aws_vpc_security_group_ingress_rule" "alb" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "alb" {
-  security_group_id = aws_security_group.alb.id
+  count = local.create_listener && var.alb_security_group_id == "" ? 1 : 0
+
+  security_group_id = aws_security_group.alb[0].id
   ip_protocol       = "-1"
   cidr_ipv4         = "0.0.0.0/0"
 }
@@ -45,7 +58,7 @@ resource "aws_vpc_security_group_ingress_rule" "tasks_from_alb" {
   from_port                    = tonumber(each.value)
   to_port                      = tonumber(each.value)
   ip_protocol                  = "tcp"
-  referenced_security_group_id = aws_security_group.alb.id
+  referenced_security_group_id = local.alb_security_group_id
 }
 
 # den-web -> den-api over Cloud Map.
@@ -103,12 +116,6 @@ resource "aws_lb_target_group" "web" {
 }
 
 # Listeners -----------------------------------------------------------------
-
-locals {
-  existing_listener_arn = var.alb_listener_arn != "" ? var.alb_listener_arn : var.listener_arn
-  create_listener       = local.existing_listener_arn == ""
-  listener_arn          = local.create_listener ? (length(aws_lb_listener.https) > 0 ? aws_lb_listener.https[0].arn : "") : local.existing_listener_arn
-}
 
 # HTTPS on 443: den-web by default, den-api by host. HTTP redirects.
 resource "aws_lb_listener" "https" {
@@ -187,4 +194,3 @@ resource "aws_lb_listener_certificate" "this" {
   listener_arn    = local.listener_arn
   certificate_arn = local.certificate_arn
 }
-

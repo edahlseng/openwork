@@ -35,6 +35,12 @@ variable "listener_arn" {
   default     = ""
 }
 
+variable "alb_security_group_id" {
+  description = "The security group ID of the existing ALB. Ingress to tasks on ports 8788 and 3005 is allowed from this group."
+  type        = string
+  default     = ""
+}
+
 variable "api_listener_rule_priority" {
   description = "Priority for the API listener rule."
   type        = number
