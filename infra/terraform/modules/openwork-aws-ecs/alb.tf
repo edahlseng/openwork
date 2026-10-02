@@ -64,18 +64,7 @@ resource "aws_vpc_security_group_egress_rule" "tasks" {
   cidr_ipv4         = "0.0.0.0/0"
 }
 
-# Load balancer --------------------------------------------------------------
-
-resource "aws_lb" "this" {
-  name                       = "${var.name}-den"
-  internal                   = var.internal_alb
-  load_balancer_type         = "application"
-  security_groups            = [aws_security_group.alb.id]
-  subnets                    = var.alb_subnet_ids
-  idle_timeout               = 300 # chat and MCP responses stream
-  drop_invalid_header_fields = true
-  tags                       = var.tags
-}
+# Target groups --------------------------------------------------------------
 
 resource "aws_lb_target_group" "api" {
   name                 = "${var.name}-den-api"
@@ -115,7 +104,7 @@ resource "aws_lb_target_group" "web" {
 
 # HTTPS on 443: den-web by default, den-api by host. HTTP redirects.
 resource "aws_lb_listener" "https" {
-  load_balancer_arn = aws_lb.this.arn
+  load_balancer_arn = var.load_balancer_arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
@@ -146,7 +135,7 @@ resource "aws_lb_listener_rule" "api_host" {
 }
 
 resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.this.arn
+  load_balancer_arn = var.load_balancer_arn
   port              = 80
   protocol          = "HTTP"
   tags              = var.tags
@@ -161,18 +150,3 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# DNS ------------------------------------------------------------------------
-
-resource "aws_route53_record" "this" {
-  for_each = var.route53_zone_id != "" ? toset([var.domain_name, local.api_host]) : toset([])
-
-  zone_id = var.route53_zone_id
-  name    = each.value
-  type    = "A"
-
-  alias {
-    name                   = aws_lb.this.dns_name
-    zone_id                = aws_lb.this.zone_id
-    evaluate_target_health = true
-  }
-}

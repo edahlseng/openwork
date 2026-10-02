@@ -19,7 +19,12 @@ variable "alb_subnet_ids" {
 
 variable "ecs_cluster" {
   description = "The ID of the ECS cluster to deploy to"
-  type = string
+  type        = string
+}
+
+variable "load_balancer_arn" {
+  description = "The ARN of the load balancer to deploy to"
+  type        = string
 }
 
 variable "service_subnet_ids" {

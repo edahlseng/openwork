@@ -19,16 +19,6 @@ output "bootstrap_code" {
   sensitive   = true
 }
 
-output "alb_dns_name" {
-  description = "ALB hostname, for a CNAME/alias if you manage DNS outside Route 53."
-  value       = aws_lb.this.dns_name
-}
-
-output "alb_zone_id" {
-  description = "ALB hosted zone ID, for a Route 53 alias record."
-  value       = aws_lb.this.zone_id
-}
-
 output "cluster_name" {
   value = aws_ecs_cluster.this.name
 }
